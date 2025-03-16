@@ -33,9 +33,10 @@ class ToolVersion(str, Enum):
 # Basic system prompt for Windows environment
 SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * You are utilizing a Windows {platform.release()} computer with internet access.
-* You can control the mouse, keyboard, and view the screen through computer use tools.
-* You can execute PowerShell commands to interact with the system.
-* You can read and write files, but access to system directories is restricted.
+* You can control the mouse, keyboard, and view the screen through the custom "computer" tool.
+* You can execute PowerShell commands using the "powershell" tool to interact with the system.
+* You can read files with the "read_file" tool.
+* You can write and edit files with the "write_file" and "edit_file" tools, but access to system directories is restricted.
 * The current date is {datetime.today().strftime('%A, %B %d, %Y')}.
 </SYSTEM_CAPABILITY>
 
@@ -43,6 +44,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * Be careful when executing commands or editing files. Always confirm dangerous operations.
 * Do not attempt to access system directories or files that may contain sensitive information.
 * When using your PowerShell tool with commands that output large amounts of text, redirect into a file and read that file afterwards.
+* For the "computer" tool, valid actions are: "screenshot", "click", "type", "move", and "hotkey".
 </IMPORTANT>"""
 
 
@@ -79,14 +81,51 @@ class ToolCollection:
     
     def to_params(self) -> list[dict]:
         """Convert tools to API parameters for Claude."""
-        # In a full implementation, this would define proper schemas
-        # Simplified version for demo purposes
         return [
-            {"name": "computer", "type": "computer_20250124", "display_width_px": 1920, "display_height_px": 1080},
-            {"name": "powershell", "type": "function", "description": "Execute PowerShell commands on Windows"},
-            {"name": "read_file", "type": "function", "description": "Read a file from the filesystem"},
-            {"name": "write_file", "type": "function", "description": "Write a file to the filesystem"},
-            {"name": "edit_file", "type": "function", "description": "Edit an existing file"}
+            {
+                "name": "computer", 
+                "description": "Interact with the Windows computer using mouse, keyboard and screenshots",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["click", "screenshot", "type", "move", "hotkey"],
+                            "description": "The action to perform on the computer"
+                        },
+                        "x": {"type": "integer", "description": "X coordinate for mouse actions"},
+                        "y": {"type": "integer", "description": "Y coordinate for mouse actions"},
+                        "text": {"type": "string", "description": "Text to type or hotkey to press"}
+                    },
+                    "required": ["action"]
+                }
+            },
+            {
+                "type": "bash_20250124",
+                "name": "powershell", 
+                "description": "Execute PowerShell commands on Windows"
+            },
+            {
+                "name": "read_file", 
+                "description": "Read a file from the filesystem",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Path to the file to read"}
+                    },
+                    "required": ["path"]
+                }
+            },
+            {
+                "type": "text_editor_20250124",
+                "name": "write_file", 
+                "description": "Write a file to the filesystem"
+            },
+            {
+                "type": "text_editor_20250124",
+                "name": "edit_file", 
+                "description": "Edit an existing file"
+            }
         ]
 
 
@@ -110,6 +149,10 @@ async def sampling_loop(
     )
 
     while True:
+        # Ensure api_key is set
+        if not api_key:
+            raise ValueError("API key must be provided")
+            
         client = Anthropic(api_key=api_key, max_retries=3)
         
         # Call the API

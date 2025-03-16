@@ -97,32 +97,54 @@ class ComputerTool:
         # Configure screenshot delay
         self._screenshot_delay = 0.5
 
-    async def __call__(self, *, action: Action, **kwargs):
+    async def __call__(self, *, action: str, **kwargs):
         """Execute the requested computer action."""
         
-        # Delegate to appropriate method based on action
+        # Simplified actions to match our tool schema
         if action == "screenshot":
             return await self.take_screenshot()
-        elif action == "cursor_position":
-            return await self.get_cursor_position()
-        elif action in ("mouse_move", "left_click_drag"):
-            return await self.handle_mouse_movement(action, **kwargs)
-        elif action in ("left_click", "right_click", "middle_click", "double_click", "triple_click"):
-            return await self.handle_mouse_click(action, **kwargs)
-        elif action in ("left_mouse_down", "left_mouse_up"):
-            return await self.handle_mouse_updown(action)
-        elif action == "key":
-            return await self.handle_key(**kwargs)
+        elif action == "click":
+            x = kwargs.get("x")
+            y = kwargs.get("y")
+            if x is None or y is None:
+                raise ToolError("Both x and y coordinates are required for click action")
+            return await self.handle_click(x, y)
+        elif action == "move":
+            x = kwargs.get("x")
+            y = kwargs.get("y")
+            if x is None or y is None:
+                raise ToolError("Both x and y coordinates are required for move action")
+            return await self.handle_move(x, y)
         elif action == "type":
-            return await self.handle_typing(**kwargs)
-        elif action == "scroll":
-            return await self.handle_scroll(**kwargs)
-        elif action == "hold_key":
-            return await self.handle_hold_key(**kwargs)
-        elif action == "wait":
-            return await self.handle_wait(**kwargs)
+            text = kwargs.get("text")
+            if not text:
+                raise ToolError("text parameter is required for type action")
+            return await self.handle_typing(text=text)
+        elif action == "hotkey":
+            text = kwargs.get("text")
+            if not text:
+                raise ToolError("text parameter is required for hotkey action")
+            return await self.handle_hotkey(text=text)
         else:
             raise ToolError(f"Invalid action: {action}")
+            
+    async def handle_click(self, x: int, y: int):
+        """Handle mouse click at specific coordinates."""
+        pyautogui.click(x, y)
+        await asyncio.sleep(self._screenshot_delay)
+        return await self.take_screenshot()
+        
+    async def handle_move(self, x: int, y: int):
+        """Handle mouse movement to specific coordinates."""
+        pyautogui.moveTo(x, y)
+        return await self.take_screenshot()
+        
+    async def handle_hotkey(self, text: str):
+        """Handle keyboard hotkey press."""
+        # Split the hotkey string by '+' and press the keys together
+        keys = text.split('+')
+        pyautogui.hotkey(*keys)
+        return await self.take_screenshot()
     
     async def take_screenshot(self):
         """Take a screenshot and return as base64 encoded PNG."""

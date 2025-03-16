@@ -35,7 +35,7 @@ class FileTool:
 class ReadFileTool(FileTool):
     """Tool for reading files on Windows."""
     
-    async def __call__(self, *, file_path: str, offset: int = 0, limit: int = 2000):
+    async def __call__(self, *, path: str, offset: int = 0, limit: int = 2000):
         """Read a file from the filesystem.
         
         Args:
@@ -47,7 +47,7 @@ class ReadFileTool(FileTool):
             ToolResult with the file contents or error.
         """
         try:
-            file_path = self.validate_path(file_path)
+            file_path = self.validate_path(path)
             
             if not os.path.exists(file_path):
                 return ToolResult(error=f"File not found: {file_path}")

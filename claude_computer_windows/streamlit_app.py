@@ -21,8 +21,8 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
 )
 
-from .loop import ToolVersion, sampling_loop
-from .tools.computer import ToolResult
+from claude_computer_windows.loop import ToolVersion, sampling_loop
+from claude_computer_windows.tools.computer import ToolResult
 
 
 class Sender(StrEnum):
