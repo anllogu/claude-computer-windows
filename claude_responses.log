@@ -2,3 +2,22 @@
 2025-03-18 19:51:19,858 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
 2025-03-18 19:58:36,710 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
 2025-03-18 20:00:16,755 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
+2025-03-18 20:03:04,336 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 200 OK"
+2025-03-18 20:03:04,375 - claude_computer_windows.loop - INFO - Received response from Claude API: 1 content blocks
+2025-03-18 20:03:04,376 - claude_computer_windows.loop - INFO - Conversation ended without tool usage
+2025-03-18 20:03:24,579 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 200 OK"
+2025-03-18 20:03:24,621 - claude_computer_windows.loop - INFO - Received response from Claude API: 2 content blocks
+2025-03-18 20:03:24,625 - claude_computer_windows.loop - INFO - Tool execution: computer with input: {'action': 'screenshot'}
+2025-03-18 20:03:25,119 - claude_computer_windows.loop - INFO - Tool execution successful: computer
+2025-03-18 20:03:25,628 - claude_computer_windows.loop - INFO - Adding 1 tool result(s) to messages
+2025-03-18 20:03:28,685 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 200 OK"
+2025-03-18 20:03:28,721 - claude_computer_windows.loop - INFO - Received response from Claude API: 2 content blocks
+2025-03-18 20:03:28,721 - claude_computer_windows.loop - INFO - Tool execution: computer with input: {'action': 'hotkey', 'text': 'ctrl+t'}
+2025-03-18 20:03:29,244 - claude_computer_windows.loop - INFO - Tool execution successful: computer
+2025-03-18 20:03:29,322 - claude_computer_windows.loop - INFO - Adding 1 tool result(s) to messages
+2025-03-18 20:03:35,177 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 200 OK"
+2025-03-18 20:03:35,218 - claude_computer_windows.loop - INFO - Received response from Claude API: 2 content blocks
+2025-03-18 20:03:35,219 - claude_computer_windows.loop - INFO - Tool execution: computer with input: {'action': 'click', 'x': 801, 'y': 35}
+2025-03-18 20:03:36,703 - claude_computer_windows.loop - INFO - Tool execution successful: computer
+2025-03-18 20:03:36,846 - claude_computer_windows.loop - INFO - Adding 1 tool result(s) to messages
+2025-03-18 20:03:38,832 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
