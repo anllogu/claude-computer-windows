@@ -6,6 +6,10 @@ import subprocess
 import sys
 import os
 import platform
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 if __name__ == "__main__":
     # Check if running on Windows

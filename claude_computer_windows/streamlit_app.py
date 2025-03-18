@@ -11,6 +11,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import cast
 
+from dotenv import load_dotenv
+
 import httpx
 import streamlit as st
 from anthropic import RateLimitError
@@ -45,7 +47,7 @@ def setup_state():
     if "api_key" not in st.session_state:
         st.session_state.api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if "model" not in st.session_state:
-        st.session_state.model = DEFAULT_MODEL
+        st.session_state.model = os.getenv("MODEL_NAME", DEFAULT_MODEL)
     if "auth_validated" not in st.session_state:
         st.session_state.auth_validated = False
     if "responses" not in st.session_state:
@@ -59,14 +61,19 @@ def setup_state():
     if "in_sampling_loop" not in st.session_state:
         st.session_state.in_sampling_loop = False
     if "output_tokens" not in st.session_state:
-        st.session_state.output_tokens = 4096
+        st.session_state.output_tokens = int(os.getenv("MAX_OUTPUT_TOKENS", "4096"))
 
 
 async def main():
     """Main Streamlit app."""
+    # Load environment variables from .env file
+    load_dotenv()
     setup_state()
 
     st.title("Claude Computer Use - Windows Version")
+    
+    # Display API configuration info
+    st.info(f"Using API configuration from .env file. Model: {st.session_state.model}\nTools: computer, bash (PowerShell), read_file, str_replace_editor (for files), edit_file")
     
     if "error_message" in st.session_state:
         st.error(st.session_state.error_message)
@@ -76,16 +83,10 @@ async def main():
 
     with st.sidebar:
         st.text_input(
-            "Anthropic API Key",
-            type="password",
-            key="api_key",
-            help="Your Anthropic API key. Get one at console.anthropic.com"
-        )
-
-        st.text_input(
             "Model",
             key="model",
-            help="Claude model to use. Default is claude-3-7-sonnet-20250219"
+            disabled=True,
+            help="Claude model to use (configured via .env file)"
         )
 
         st.text_area(
@@ -96,7 +97,7 @@ async def main():
 
         st.checkbox("Hide screenshots", key="hide_images")
         
-        st.number_input("Max Output Tokens", key="output_tokens", min_value=1024, max_value=128000, step=1024)
+        st.number_input("Max Output Tokens", key="output_tokens", min_value=1024, max_value=128000, step=1024, disabled=True)
 
         if st.button("Reset Chat", type="primary"):
             st.session_state.messages = []
@@ -106,7 +107,7 @@ async def main():
 
     if not st.session_state.auth_validated:
         if not st.session_state.api_key:
-            st.session_state.error_message = "Please enter your Anthropic API key in the sidebar."
+            st.session_state.error_message = "API key not found. Please check your .env file and ensure ANTHROPIC_API_KEY is set properly."
             st.rerun()
         st.session_state.auth_validated = True
 

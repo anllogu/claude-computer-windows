@@ -42,6 +42,19 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+4. Create a `.env` file with your Anthropic API key:
+```
+cp .env.example .env
+```
+
+5. Edit the `.env` file with your actual API key and optionally customize other settings:
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Optional custom settings
+# MODEL_NAME=claude-3-7-sonnet-20250219
+# MAX_OUTPUT_TOKENS=4096
+```
+
 ## Usage
 
 1. Run the Streamlit application:
@@ -50,7 +63,12 @@ pip install -r requirements.txt
 streamlit run claude_computer_windows/streamlit_app.py
 ```
 
-2. Enter your Anthropic API key in the sidebar.
+Alternatively, use the command line entry point:
+```
+python -m claude_computer_windows
+```
+
+2. Make sure you've set up the `.env` file as described above, as the API key configuration is only available via this file.
 
 3. Start chatting with Claude. You can ask it to:
    - Take a screenshot (`Take a screenshot of my desktop`)

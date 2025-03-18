@@ -6,9 +6,15 @@ Simplified version of the original Linux loop.py.
 import asyncio
 import os
 import platform
+import logging
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, cast
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 import httpx
 from anthropic import Anthropic, APIError, APIResponseValidationError, APIStatusError
@@ -18,6 +24,17 @@ from anthropic.types.beta import (
     BetaTextBlockParam,
     BetaToolResultBlockParam,
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("claude_responses.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 from .tools.computer import ComputerTool, ToolResult
 from .tools.cmd import PowerShellTool
@@ -34,9 +51,9 @@ class ToolVersion(str, Enum):
 SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * You are utilizing a Windows {platform.release()} computer with internet access.
 * You can control the mouse, keyboard, and view the screen through the custom "computer" tool.
-* You can execute PowerShell commands using the "powershell" tool to interact with the system.
+* You can execute PowerShell commands using the "bash" tool to interact with the system.
 * You can read files with the "read_file" tool.
-* You can write and edit files with the "write_file" and "edit_file" tools, but access to system directories is restricted.
+* You can write files with the "str_replace_editor" tool and edit files with the "edit_file" tool, but access to system directories is restricted.
 * The current date is {datetime.today().strftime('%A, %B %d, %Y')}.
 </SYSTEM_CAPABILITY>
 
@@ -55,9 +72,9 @@ class ToolCollection:
         """Initialize the tool collection with Windows-appropriate tools."""
         self.tools = {
             "computer": ComputerTool(),
-            "powershell": PowerShellTool(),
+            "bash": PowerShellTool(),  # Renamed for API compatibility
             "read_file": ReadFileTool(),
-            "write_file": WriteFileTool(),
+            "str_replace_editor": WriteFileTool(),  # Renamed for API compatibility
             "edit_file": EditFileTool(),
         }
     
@@ -102,8 +119,7 @@ class ToolCollection:
             },
             {
                 "type": "bash_20250124",
-                "name": "powershell", 
-                "description": "Execute PowerShell commands on Windows"
+                "name": "bash"
             },
             {
                 "name": "read_file", 
@@ -118,13 +134,19 @@ class ToolCollection:
             },
             {
                 "type": "text_editor_20250124",
-                "name": "write_file", 
-                "description": "Write a file to the filesystem"
+                "name": "str_replace_editor"
             },
             {
-                "type": "text_editor_20250124",
                 "name": "edit_file", 
-                "description": "Edit an existing file"
+                "description": "Edit an existing file",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Path to the file to edit"},
+                        "content": {"type": "string", "description": "New content for the file"}
+                    },
+                    "required": ["path", "content"]
+                }
             }
         ]
 
@@ -176,6 +198,8 @@ async def sampling_loop(
         )
 
         response = raw_response.parse()
+        logger.info(f"Received response from Claude API: {len(response.content)} content blocks")
+        logger.debug(f"Raw response content: {response.content}")
 
         # Convert to the format expected by the application
         response_params = []
@@ -196,10 +220,17 @@ async def sampling_loop(
         for content_block in response_params:
             output_callback(content_block)
             if content_block["type"] == "tool_use":
+                logger.info(f"Tool execution: {content_block['name']} with input: {content_block['input']}")
                 result = await tool_collection.run(
                     name=content_block["name"],
                     tool_input=cast(dict[str, Any], content_block["input"]),
                 )
+                
+                # Log tool result
+                if isinstance(result, ToolResult) and result.error:
+                    logger.error(f"Tool execution error: {result.error}")
+                else:
+                    logger.info(f"Tool execution successful: {content_block['name']}")
                 
                 # Create tool result block
                 tool_result_content.append({
@@ -212,8 +243,10 @@ async def sampling_loop(
                 tool_output_callback(result, content_block["id"])
 
         if not tool_result_content:
+            logger.info("Conversation ended without tool usage")
             return messages
 
+        logger.info(f"Adding {len(tool_result_content)} tool result(s) to messages")
         messages.append({"content": tool_result_content, "role": "user"})
 
 

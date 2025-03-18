@@ -20,8 +20,7 @@ async def test_claude_tools():
     tools = [
         {
             "type": "bash_20250124",
-            "name": "powershell",
-            "description": "Run PowerShell commands"
+            "name": "bash"
         }
     ]
     

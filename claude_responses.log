@@ -1,0 +1,4 @@
+2025-03-18 19:50:24,549 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
+2025-03-18 19:51:19,858 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
+2025-03-18 19:58:36,710 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
+2025-03-18 20:00:16,755 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages?beta=true "HTTP/1.1 400 Bad Request"
