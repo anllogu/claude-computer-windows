@@ -53,6 +53,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 # Optional custom settings
 # MODEL_NAME=claude-3-7-sonnet-20250219
 # MAX_OUTPUT_TOKENS=4096
+# SCREENSHOT_DELAY=10  # Delay in seconds between action and screenshot
 ```
 
 ## Usage
@@ -66,6 +67,9 @@ streamlit run claude_computer_windows/streamlit_app.py
 Alternatively, use the command line entry point:
 ```
 python -m claude_computer_windows
+
+# Run with custom screenshot delay (10 seconds)
+python -m claude_computer_windows --screenshot-delay 10
 ```
 
 2. Make sure you've set up the `.env` file as described above, as the API key configuration is only available via this file.

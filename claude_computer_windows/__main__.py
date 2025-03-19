@@ -6,12 +6,22 @@ import subprocess
 import sys
 import os
 import platform
+import argparse
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Claude Computer Windows")
+    parser.add_argument("--screenshot-delay", type=float, default=os.getenv("SCREENSHOT_DELAY", 0.5),
+                        help="Delay in seconds between action and screenshot (default: 0.5)")
+    args = parser.parse_args()
+    
+    # Set screenshot delay in environment for other processes to access
+    os.environ["SCREENSHOT_DELAY"] = str(args.screenshot_delay)
+    
     # Check if running on Windows
     if platform.system() != "Windows":
         print("This application is designed to run on Windows only.")

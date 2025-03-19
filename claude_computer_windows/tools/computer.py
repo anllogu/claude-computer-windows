@@ -48,7 +48,7 @@ ScrollDirection = Literal["up", "down", "left", "right"]
 logger = logging.getLogger(__name__)
 
 # Base output directory
-BASE_OUTPUT_DIR = "screenshots"
+BASE_OUTPUT_DIR = "logs/screenshots"
 
 # Current session directory (to be initialized in ComputerTool.__init__)
 SESSION_DIR = ""
@@ -132,8 +132,15 @@ class ComputerTool:
         logger.info(f"Conversation log will be saved to: {self.conversation_log_path}")
         logger.info(f"Screen resolution: {self.width}x{self.height}, scale factor: {self.scale_factor}")
         
-        # Configure screenshot delay
-        self._screenshot_delay = 0.5
+        # Configure screenshot delay - default 0.5s but can be overridden by env var or command line
+        default_delay = 0.5
+        env_delay = os.getenv("SCREENSHOT_DELAY", default_delay)
+        try:
+            self._screenshot_delay = float(env_delay)
+        except (ValueError, TypeError):
+            self._screenshot_delay = default_delay
+            
+        logger.info(f"Screenshot delay set to: {self._screenshot_delay} seconds")
 
     async def __call__(self, *, action: str, **kwargs):
         """Execute the requested computer action."""
@@ -205,7 +212,6 @@ class ComputerTool:
         
         # Perform the click at the adjusted coordinates
         pyautogui.click(adjusted_x, adjusted_y)
-        await asyncio.sleep(self._screenshot_delay)
         return await self.take_screenshot()
         
     async def handle_move(self, x: int, y: int):
@@ -229,6 +235,10 @@ class ComputerTool:
     
     async def take_screenshot(self):
         """Take a screenshot and return as base64 encoded PNG."""
+        # Wait the configured delay time before taking the screenshot
+        logger.info(f"Waiting {self._screenshot_delay} seconds before taking screenshot...")
+        await asyncio.sleep(self._screenshot_delay)
+        
         screenshot = pyautogui.screenshot()
         
         # Create screenshot filename with timestamp only (no prefix)
@@ -317,7 +327,6 @@ class ComputerTool:
             pyautogui.keyUp(key)
         
         # Return screenshot after action
-        await asyncio.sleep(self._screenshot_delay)
         return await self.take_screenshot()
     
     async def handle_mouse_updown(self, action):
