@@ -8,6 +8,8 @@ import base64
 import io
 import os
 import time
+import logging
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal, TypedDict, cast, get_args
@@ -42,7 +44,14 @@ Action = Literal[
 
 ScrollDirection = Literal["up", "down", "left", "right"]
 
-OUTPUT_DIR = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "claude_outputs")
+# Set up logger
+logger = logging.getLogger(__name__)
+
+# Base output directory
+BASE_OUTPUT_DIR = "screenshots"
+
+# Current session directory (to be initialized in ComputerTool.__init__)
+SESSION_DIR = ""
 
 
 class ToolError(Exception):
@@ -85,14 +94,43 @@ class ComputerTool:
     """
 
     def __init__(self):
-        """Initialize the computer tool with screen dimensions."""
-        # Get actual screen size
-        screen_size = pyautogui.size()
-        self.width = screen_size.width
-        self.height = screen_size.height
+        """Initialize the computer tool with fixed screen dimensions (1920x1080)."""
+        # Use fixed screen size of 1920x1080
+        self.width = 1920
+        self.height = 1080
         
-        # Create output directory
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        # Get actual screen size for logging purposes
+        actual_screen_size = pyautogui.size()
+        
+        # Fix scale factor to 1.0
+        self.scale_factor = 1.0
+        
+        logger.info(f"Using fixed screen dimensions: {self.width}x{self.height}")
+        logger.info(f"Actual screen dimensions: {actual_screen_size.width}x{actual_screen_size.height}")
+        logger.info(f"Using fixed scale factor: {self.scale_factor}")
+        
+        # Create base screenshots directory
+        os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
+        
+        # Create session-specific directory with date only format YYMMDD
+        now = datetime.now()
+        session_timestamp = now.strftime("%y%m%d")
+        self.session_dir = os.path.join(BASE_OUTPUT_DIR, session_timestamp)
+        os.makedirs(self.session_dir, exist_ok=True)
+        
+        # Create a session-specific log file
+        self.conversation_log_path = os.path.join(self.session_dir, "conversation.log")
+        
+        # Add a separator in the log file for new app sessions
+        with open(self.conversation_log_path, "a", encoding="utf-8") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"\n\n{'#' * 80}\n")
+            f.write(f"# {timestamp} - NEW SESSION STARTED\n")
+            f.write(f"{'#' * 80}\n\n")
+        
+        logger.info(f"Screenshots will be saved to: {self.session_dir}")
+        logger.info(f"Conversation log will be saved to: {self.conversation_log_path}")
+        logger.info(f"Screen resolution: {self.width}x{self.height}, scale factor: {self.scale_factor}")
         
         # Configure screenshot delay
         self._screenshot_delay = 0.5
@@ -125,18 +163,61 @@ class ComputerTool:
             if not text:
                 raise ToolError("text parameter is required for hotkey action")
             return await self.handle_hotkey(text=text)
+        elif action == "set_scale_factor":
+            # We're using fixed scale factor, but keep this action for compatibility
+            return ToolResult(output="Using fixed scale factor of 1.0. This command has no effect.")
         else:
             raise ToolError(f"Invalid action: {action}")
             
+    def _adjust_coordinates(self, x: int, y: int):
+        """
+        Adjust coordinates to match actual screen resolution.
+        
+        Args:
+            x: The x coordinate from the image
+            y: The y coordinate from the image
+            
+        Returns:
+            Tuple of adjusted coordinates
+        """
+        # Based on the example of bottom-right pixel (1438,812 -> should be 1920,1080)
+        # Calculate the scaling factors needed
+        x_scale = 1920 / 1438
+        y_scale = 1080 / 812
+        
+        # Apply scaling to coordinates
+        adjusted_x = int(x * x_scale)
+        adjusted_y = int(y * y_scale)
+        
+        # Log both original and adjusted coordinates
+        logger.info(f"Original coordinates: ({x}, {y})")
+        logger.info(f"Adjusted coordinates: ({adjusted_x}, {adjusted_y}) [x_scale={x_scale:.2f}, y_scale={y_scale:.2f}]")
+        
+        return adjusted_x, adjusted_y
+        
     async def handle_click(self, x: int, y: int):
         """Handle mouse click at specific coordinates."""
-        pyautogui.click(x, y)
+        # Adjust coordinates based on screen scaling
+        adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+        
+        # Log the action with both original and adjusted coordinates
+        logger.info(f"Clicking at: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+        
+        # Perform the click at the adjusted coordinates
+        pyautogui.click(adjusted_x, adjusted_y)
         await asyncio.sleep(self._screenshot_delay)
         return await self.take_screenshot()
         
     async def handle_move(self, x: int, y: int):
         """Handle mouse movement to specific coordinates."""
-        pyautogui.moveTo(x, y)
+        # Adjust coordinates based on screen scaling
+        adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+        
+        # Log the action
+        logger.info(f"Moving to: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+        
+        # Move to the adjusted coordinates
+        pyautogui.moveTo(adjusted_x, adjusted_y)
         return await self.take_screenshot()
         
     async def handle_hotkey(self, text: str):
@@ -150,16 +231,21 @@ class ComputerTool:
         """Take a screenshot and return as base64 encoded PNG."""
         screenshot = pyautogui.screenshot()
         
-        # Save to file and also encode to base64
-        output_path = os.path.join(OUTPUT_DIR, f"screenshot_{uuid4().hex}.png")
+        # Create screenshot filename with timestamp only (no prefix)
+        now = datetime.now()
+        filename = f"{now.strftime('%y%m%d_%H%M%S')}.png"
+        output_path = os.path.join(self.session_dir, filename)
         screenshot.save(output_path)
+        
+        # Log the screenshot path
+        logger.info(f"Screenshot saved: {output_path}")
         
         # Convert to base64
         buffered = io.BytesIO()
         screenshot.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
         
-        return ToolResult(output="Screenshot taken", base64_image=img_str)
+        return ToolResult(output=f"Screenshot taken: {filename}", base64_image=img_str)
     
     async def get_cursor_position(self):
         """Get the current position of the cursor."""
@@ -173,14 +259,19 @@ class ComputerTool:
             raise ToolError("coordinate must be a tuple of [x, y]")
         
         x, y = coordinate
+        # Adjust coordinates based on screen scaling
+        adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+        
         if action == "mouse_move":
             # Move mouse to position
-            pyautogui.moveTo(x, y)
+            logger.info(f"Moving mouse to: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+            pyautogui.moveTo(adjusted_x, adjusted_y)
             return await self.take_screenshot()
         elif action == "left_click_drag":
             # Click and drag from current position to target
             current_x, current_y = pyautogui.position()
-            pyautogui.dragTo(x, y, button='left')
+            logger.info(f"Dragging from {current_x},{current_y} to {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+            pyautogui.dragTo(adjusted_x, adjusted_y, button='left')
             return await self.take_screenshot()
     
     async def handle_mouse_click(self, action, **kwargs):
@@ -191,28 +282,38 @@ class ComputerTool:
         # Move mouse if coordinates provided
         if coordinate and len(coordinate) == 2:
             x, y = coordinate
-            pyautogui.moveTo(x, y)
+            # Adjust coordinates based on screen scaling
+            adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+            logger.info(f"Moving to before click: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+            pyautogui.moveTo(adjusted_x, adjusted_y)
         
         # Handle key modifiers
         modifiers_active = False
         if key:
+            logger.info(f"Pressing modifier key: {key}")
             pyautogui.keyDown(key)
             modifiers_active = True
         
         # Perform click action
         if action == "left_click":
+            logger.info("Performing left click")
             pyautogui.click(button='left')
         elif action == "right_click":
+            logger.info("Performing right click")
             pyautogui.click(button='right')
         elif action == "middle_click":
+            logger.info("Performing middle click")
             pyautogui.click(button='middle')
         elif action == "double_click":
+            logger.info("Performing double click")
             pyautogui.click(button='left', clicks=2, interval=0.1)
         elif action == "triple_click":
+            logger.info("Performing triple click")
             pyautogui.click(button='left', clicks=3, interval=0.1)
         
         # Release modifiers
         if modifiers_active:
+            logger.info(f"Releasing modifier key: {key}")
             pyautogui.keyUp(key)
         
         # Return screenshot after action

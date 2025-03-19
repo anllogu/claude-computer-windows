@@ -23,7 +23,7 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
 )
 
-from claude_computer_windows.loop import ToolVersion, sampling_loop
+from claude_computer_windows.loop import ToolVersion, sampling_loop, log_conversation, SESSION_LOG_PATH, LOG_FILE
 from claude_computer_windows.tools.computer import ToolResult
 
 
@@ -138,6 +138,9 @@ async def main():
 
         # Handle new user message
         if new_message:
+            # Log user message
+            log_conversation("user", new_message, SESSION_LOG_PATH)
+            
             st.session_state.messages.append({
                 "role": Sender.USER,
                 "content": [
