@@ -39,9 +39,13 @@ log_level = log_levels.get(log_level_str, logging.INFO)
 # Create logs directory
 os.makedirs("logs", exist_ok=True)
 
+# Create dated directory for logs
+date_dir = datetime.now().strftime("%Y%m%d")
+os.makedirs(f"logs/{date_dir}", exist_ok=True)
+
 # Create log file with timestamp (sortable by ls -ltr)
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = f"logs/claude_{timestamp}.log"
+log_filename = f"logs/{date_dir}/claude_{timestamp}.log"
 
 # Set global variable for log file name
 LOG_FILE = log_filename
@@ -123,7 +127,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * Be careful when executing commands or editing files. Always confirm dangerous operations.
 * Do not attempt to access system directories or files that may contain sensitive information.
 * When using your PowerShell tool with commands that output large amounts of text, redirect into a file and read that file afterwards.
-* For the "computer" tool, valid actions are: "screenshot", "click", "type", "move", "hotkey", and "set_scale_factor". If clicks aren't registering at the correct position, use set_scale_factor to adjust the DPI scaling.
+* For the "computer" tool, valid actions are: "screenshot", "click", "double_click", "scroll", "type", "move", "hotkey", and "set_scale_factor". If clicks aren't registering at the correct position, use set_scale_factor to adjust the DPI scaling.
 </IMPORTANT>"""
 
 
@@ -176,12 +180,14 @@ class ToolCollection:
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["click", "screenshot", "type", "move", "hotkey", "set_scale_factor"],
+                            "enum": ["click", "double_click", "scroll", "screenshot", "type", "move", "hotkey", "set_scale_factor"],
                             "description": "The action to perform on the computer"
                         },
                         "x": {"type": "integer", "description": "X coordinate for mouse actions"},
                         "y": {"type": "integer", "description": "Y coordinate for mouse actions"},
                         "text": {"type": "string", "description": "Text to type or hotkey to press"},
+                        "direction": {"type": "string", "enum": ["up", "down", "left", "right"], "description": "Direction for scroll action"},
+                        "amount": {"type": "integer", "description": "Amount to scroll (default: 3)"},
                         "scale": {"type": "number", "description": "Scale factor value for set_scale_factor action"}
                     },
                     "required": ["action"]

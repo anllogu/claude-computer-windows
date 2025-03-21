@@ -154,6 +154,20 @@ class ComputerTool:
             if x is None or y is None:
                 raise ToolError("Both x and y coordinates are required for click action")
             return await self.handle_click(x, y)
+        elif action == "double_click":
+            x = kwargs.get("x")
+            y = kwargs.get("y")
+            if x is None or y is None:
+                raise ToolError("Both x and y coordinates are required for double click action")
+            return await self.handle_double_click(x, y)
+        elif action == "scroll":
+            x = kwargs.get("x")
+            y = kwargs.get("y")
+            direction = kwargs.get("direction", "down")
+            amount = kwargs.get("amount", 3)
+            if direction not in ["up", "down", "left", "right"]:
+                raise ToolError("Direction must be one of: up, down, left, right")
+            return await self.handle_scroll(x=x, y=y, direction=direction, amount=amount)
         elif action == "move":
             x = kwargs.get("x")
             y = kwargs.get("y")
@@ -214,6 +228,18 @@ class ComputerTool:
         pyautogui.click(adjusted_x, adjusted_y)
         return await self.take_screenshot()
         
+    async def handle_double_click(self, x: int, y: int):
+        """Handle mouse double click at specific coordinates."""
+        # Adjust coordinates based on screen scaling
+        adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+        
+        # Log the action with both original and adjusted coordinates
+        logger.info(f"Double clicking at: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+        
+        # Perform the double click at the adjusted coordinates
+        pyautogui.doubleClick(adjusted_x, adjusted_y)
+        return await self.take_screenshot()
+        
     async def handle_move(self, x: int, y: int):
         """Handle mouse movement to specific coordinates."""
         # Adjust coordinates based on screen scaling
@@ -231,6 +257,34 @@ class ComputerTool:
         # Split the hotkey string by '+' and press the keys together
         keys = text.split('+')
         pyautogui.hotkey(*keys)
+        return await self.take_screenshot()
+        
+    async def handle_scroll(self, x: int = None, y: int = None, direction: str = "down", amount: int = 3):
+        """Handle scrolling at specific coordinates with specified direction and amount."""
+        # If coordinates are provided, move to that position first
+        if x is not None and y is not None:
+            # Adjust coordinates based on screen scaling
+            adjusted_x, adjusted_y = self._adjust_coordinates(x, y)
+            logger.info(f"Moving to position before scrolling: {x},{y} (adjusted to {adjusted_x},{adjusted_y})")
+            pyautogui.moveTo(adjusted_x, adjusted_y)
+        
+        # Multiply amount by a factor to make scrolling more noticeable
+        scroll_factor = 100  # This can be adjusted based on testing
+        scroll_amount = amount * scroll_factor
+        
+        # Log the action
+        logger.info(f"Scrolling {direction} with amount {amount} (adjusted to {scroll_amount})")
+        
+        # Perform the scrolling
+        if direction == "up":
+            pyautogui.scroll(scroll_amount)  # Positive values scroll up
+        elif direction == "down":
+            pyautogui.scroll(-scroll_amount)  # Negative values scroll down
+        elif direction == "left":
+            pyautogui.hscroll(-scroll_amount)  # Negative values scroll left
+        elif direction == "right":
+            pyautogui.hscroll(scroll_amount)  # Positive values scroll right
+            
         return await self.take_screenshot()
     
     async def take_screenshot(self):
