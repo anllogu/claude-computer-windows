@@ -7,7 +7,8 @@ This is a Windows-native implementation of the Claude Computer Use demo, allowin
 - Control mouse, keyboard, and take screenshots directly on Windows
 - Execute PowerShell commands
 - Read and write files
-- Simple Streamlit interface
+- Simple Streamlit interface for interactive use
+- API-only mode for programmatic access
 - Works with Claude 3.5 Sonnet and Claude 3.7 Sonnet models
 
 ## Security Warning
@@ -39,7 +40,11 @@ venv\Scripts\activate
 3. Install dependencies:
 
 ```
+# Basic installation with GUI support
 pip install -r requirements.txt
+
+# For API-only mode
+pip install -e ".[api]"
 ```
 
 4. Create a `.env` file with your Anthropic API key:
@@ -58,19 +63,28 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ## Usage
 
-1. Run the Streamlit application:
+1. Run the application in one of the following ways:
 
-```
-streamlit run claude_computer_windows/streamlit_app.py
-```
+   a. With Streamlit GUI:
+   ```
+   streamlit run claude_computer_windows/streamlit_app.py
+   ```
 
-Alternatively, use the command line entry point:
-```
-python -m claude_computer_windows
+   b. Using the command line entry point (GUI mode):
+   ```
+   python -m claude_computer_windows
 
-# Run with custom screenshot delay (10 seconds)
-python -m claude_computer_windows --screenshot-delay 10
-```
+   # Run with custom screenshot delay (10 seconds)
+   python -m claude_computer_windows --screenshot-delay 10
+   ```
+
+   c. In API-only mode (no GUI):
+   ```
+   python -m claude_computer_windows --api-only
+
+   # With custom port and host
+   python -m claude_computer_windows --api-only --port 8080 --host 127.0.0.1
+   ```
 
 2. Make sure you've set up the `.env` file as described above, as the API key configuration is only available via this file.
 
@@ -80,6 +94,46 @@ python -m claude_computer_windows --screenshot-delay 10
    - Type text (`Type "Hello World" in Notepad`)
    - Execute PowerShell commands (`List the files in my Downloads folder`)
    - Read and write files (`Read the file C:\\path\\to\\file.txt`)
+
+## API Usage
+
+When running in API-only mode, you can interact with the application programmatically:
+
+1. Send a prompt as JSON:
+```
+POST /api/run
+Content-Type: application/json
+
+{
+  "prompt": "Take a screenshot and click on the Start menu"
+}
+```
+
+2. Send a prompt as plain text:
+```
+POST /api/run-text
+Content-Type: text/plain
+
+Take a screenshot and click on the Start menu
+```
+
+The API returns the final message and screenshots after execution:
+```json
+{
+  "response": "I've taken a screenshot and clicked on the Start menu for you. The Start menu is now open.",
+  "screenshots": [
+    "base64_encoded_image_data..."
+  ]
+}
+```
+
+Error responses:
+```json
+{
+  "status": "error",
+  "error": "ErrorType: Error message details"
+}
+```
 
 ## Limitations
 
